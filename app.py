@@ -43,7 +43,7 @@ def carregar_dados(caminho_arquivo):
     return df_completo
 
 # # Carregar arquivo
-caminho_arquivo = r"H:\sem40dados\python-tecTI\dados\Pandas_Aula1_2\mulheres_ibge\Tabela 1.1.2.xls"
+caminho_arquivo = r"Tabela 1.1.2.xls"
 
 try:
     df = carregar_dados(caminho_arquivo)
