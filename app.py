@@ -43,7 +43,7 @@ def carregar_dados(caminho_arquivo):
     return df_completo
 
 # # Carregar arquivo
-caminho_arquivo = r"H:\sem40dados\python-tecTI\dados\Pandas_Aula1_2\mulheres_ibge\Tabela 1.1.2.xls"
+caminho_arquivo = r"DEPLOY\Tabela 1.1.2.xls"
 
 try:
     df = carregar_dados(caminho_arquivo)
@@ -64,7 +64,7 @@ try:
     )
 
     # --- CORPO DA APLICAÇÃO ---
-    st.title("📊 Horas Dedicadas a Cuidados e Afazeres Domésticos")
+    st.title("📊 Horas Dedicadas a Cuidados e Afazeres Domésticos!")
     st.markdown("Análise da média de horas semanais dedicadas por pessoas ocupadas de 14 anos ou mais, por sexo.")
 
     # Filtrar DataFrame com base nas seleções
@@ -122,3 +122,89 @@ try:
 except Exception as e:
     st.error(f"Erro ao carregar o arquivo: {e}")
     st.info("Certifique-se de que o arquivo 'Tabela 1.1.2.xls' está no mesmo diretório do script.")
+    
+    st.subheader("👶👵 Gráfico Novo 1: Carga de Trabalho das Mulheres por Idade")
+
+# Transforma as colunas de idade em linhas (Melt) para gerar o gráfico de linhas
+df_idades_mulher = df_ano_atual.melt(
+    id_vars=["Localidade"],
+    value_vars=["14-29_Mulher", "30-49_Mulher", "50-59_Mulher", "60+_Mulher"],
+    var_name="Grupo de Idade", 
+    value_name="Horas Semanais"
+)
+# Deixa os nomes dos grupos mais limpos no eixo X
+df_idades_mulher["Grupo de Idade"] = df_idades_mulher["Grupo de Idade"].str.replace("_Mulher", " anos")
+
+fig_profile = px.line(
+    df_idades_mulher,
+    x="Grupo de Idade", 
+    y="Horas Semanais", 
+    color="Localidade", 
+    markers=True,
+    title="Jornada de Cuidados/Afazeres Domésticos das Mulheres ao Longo da Vida",
+    labels={"Horas Semanais": "Horas/Semana", "Grupo de Idade": "Faixa Etária"}
+)
+st.plotly_chart(fig_profile, use_container_width=True)
+
+
+st.subheader("📊 Gráfico Novo 2: Comparativo de Jornada por Idades (Foco Brasil)")
+
+# Filtra apenas a linha do Brasil no ano selecionado
+df_br = df_valores[(df_valores["Ano"] == ano_selecionado) & (df_valores["Localidade"] == "Brasil")]
+
+if not df_br.empty:
+    df_br_melt = df_br.melt(
+        value_vars=["14-29_Homem", "14-29_Mulher", "30-49_Homem", "30-49_Mulher", "50-59_Homem", "50-59_Mulher", "60+_Homem", "60+_Mulher"],
+        var_name="Chave", 
+        value_name="Média de Horas"
+    )
+    # Separa a string (ex: "14-29_Homem") em duas colunas novas: Idade e Gênero
+    df_br_melt["Idade"] = df_br_melt["Chave"].apply(lambda x: x.split("_")[0] + " anos")
+    df_br_melt["Gênero"] = df_br_melt["Chave"].apply(lambda x: x.split("_")[1])
+    
+    fig_radar_bar = px.bar(
+        df_br_melt,
+        x="Idade", 
+        y="Média de Horas", 
+        color="Gênero", 
+        barmode="group",
+        title="Brasil: Comparativo de Jornada por Grupo de Idade e Sexo",
+        color_discrete_sequence=["#1f77b4", "#e377c2"],
+        labels={"Média de Horas": "Horas Semanais"}
+    )
+    st.plotly_chart(fig_radar_bar, use_container_width=True)
+else:
+    st.info("Para ver este gráfico, certifique-se de manter a localidade 'Brasil' selecionada.")
+
+
+st.subheader("📉 Gráfico Novo 3: Análise Estatística de Confiabilidade (Valor Médio vs CV)")
+
+# Filtra a tabela de CV de acordo com o ano e localidades da barra lateral
+df_cv_filtrado = df_cv[(df_cv["Ano"] == ano_selecionado) & (df_cv["Localidade"].isin(localidades_selecionadas))].copy()
+
+if not df_cv_filtrado.empty:
+    # Cruza (Merge) o DataFrame de Horas Reais com o de Coeficiente de Variação usando a Localidade
+    df_reliability = pd.merge(
+        df_ano_atual[["Localidade", f"{prefixo_col}_Geral"]], 
+        df_cv_filtrado[["Localidade", f"{prefixo_col}_Geral"]], 
+        on="Localidade", 
+        suffixes=("_Valor", "_CV")
+    )
+    
+    fig_scatter = px.scatter(
+        df_reliability,
+        x=f"{prefixo_col}_Geral_Valor",
+        y=f"{prefixo_col}_Geral_CV",
+        text="Localidade",
+        size=f"{prefixo_col}_Geral_Valor",
+        title=f"Dispersão: Horas Semanais vs. Erro Amostral (CV %) para: {faixa_selecionada}",
+        labels={
+            f"{prefixo_col}_Geral_Valor": "Média de Horas Semanais (Valor Real)", 
+            f"{prefixo_col}_Geral_CV": "Coeficiente de Variação (Menor % = Dado mais confiável)"
+        }
+    )
+    # Alinha os textos dos nomes das localidades para cima das bolhas do gráfico
+    fig_scatter.update_traces(textposition='top center')
+    st.plotly_chart(fig_scatter, use_container_width=True)
+else:
+    st.info("Dados de Coeficiente de Variação (CV) não encontrados para plotar a confiabilidade.")
