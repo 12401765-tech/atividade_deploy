@@ -122,3 +122,26 @@ try:
 except Exception as e:
     st.error(f"Erro ao carregar o arquivo: {e}")
     st.info("Certifique-se de que o arquivo 'Tabela 1.1.2.xls' está no mesmo diretório do script.")
+    
+st.subheader("👶👵 Gráfico Novo 1: Carga de Trabalho das Mulheres por Idade")
+
+# Transforma as colunas de idade em linhas (Melt) para gerar o gráfico de linhas
+df_idades_mulher = df_ano_atual.melt(
+    id_vars=["Localidade"],
+    value_vars=["14-29_Mulher", "30-49_Mulher", "50-59_Mulher", "60+_Mulher"],
+    var_name="Grupo de Idade", 
+    value_name="Horas Semanais"
+)
+# Deixa os nomes dos grupos mais limpos no eixo X
+df_idades_mulher["Grupo de Idade"] = df_idades_mulher["Grupo de Idade"].str.replace("_Mulher", " anos")
+
+fig_profile = px.line(
+    df_idades_mulher,
+    x="Grupo de Idade", 
+    y="Horas Semanais", 
+    color="Localidade", 
+    markers=True,
+    title="Jornada de Cuidados/Afazeres Domésticos das Mulheres ao Longo da Vida",
+    labels={"Horas Semanais": "Horas/Semana", "Grupo de Idade": "Faixa Etária"}
+)
+st.plotly_chart(fig_profile, use_container_width=True)
